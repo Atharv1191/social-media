@@ -1,5 +1,5 @@
 const { Inngest } = require('inngest');
-const User = require('../models/User');
+const User = require('../models/User.js');
 
 // Initialize Inngest
 const inngest = new Inngest({ id: "pingup-app" });
