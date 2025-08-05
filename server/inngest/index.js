@@ -2,7 +2,7 @@ const { Inngest } = require('inngest');
 const User = require('../models/user');
 
 // Initialize Inngest
-const inngest = new Inngest({ name: "pingup-app" });
+const inngest = new Inngest({ id: "pingup-app" });
 
 //inngest function to save user in database
 

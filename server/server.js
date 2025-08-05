@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./configs/db");
 const {inngest,functions} = require('./inngest/index')
+const {serve} = require('inngest/express')
 require('dotenv').config();
 
 const app = express()
