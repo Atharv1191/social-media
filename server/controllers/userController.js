@@ -2,6 +2,8 @@ const fs = require("fs");
 const imagekit = require("../configs/imagekit");
 const User = require("../models/User");
 const Connection = require("../models/Connection");
+const Post = require("../models/Post");
+const inngest = require("../inngest/index");
 
 // GET USER DATA
 const getUserData = async (req, res) => {
@@ -247,11 +249,16 @@ const sendConnectionRequest = async (req, res) => {
     });
 
     if (!existingConnection) {
-      await Connection.create({
+     const newConnection =  await Connection.create({
         from_user_id: userId,
-        to_user_id: targetUserId,
-        status: "pending"
+        to_user_id: targetUserId
+       
       });
+      await inngest.send({
+        name:"app/connection-request",
+        data:{connectionId:newConnection._id}
+      })
+
 
       return res.json({
         success: true,
@@ -367,6 +374,34 @@ const acceptConnectionRequest = async (req, res) => {
   }
 };
 
+//get useer profiles
+
+const getUserProfiles = async(req,res)=>{
+  try {
+    const {profileId} = req.body;
+    const profile = await User.findById(profileId)
+    if(!profile){
+      return res.json({
+        success:false,
+        message:"Profile not found"
+      })
+    }
+    const posts = await Post.find({user:profileId}).populate("user")
+    return res.json({
+      success:true,
+      profile,
+      posts
+
+    })
+  } catch (error) {
+
+    return res.json({
+      success: false,
+      message: error.message,
+    });
+    
+  } 
+}
 
 
 module.exports = {
@@ -377,5 +412,6 @@ module.exports = {
   UnFollowUser,
   sendConnectionRequest,
   getUserConnections,
-  acceptConnectionRequest
+  acceptConnectionRequest,
+  getUserProfiles
 };

@@ -8,9 +8,9 @@ const {inngest,functions} = require('./inngest/index')
 const {serve} = require('inngest/express')
 const { clerkMiddleware } = require('@clerk/express');
 const userRoute = require('./routes/userRoutes')
-
-
-
+const postRoute = require('./routes/postRoutes')
+const storyRoute = require('./routes/storyRoutes')
+const messageRoute = require("./routes/messageRoutes")
 const app = express()
 connectDB()
 
@@ -24,6 +24,9 @@ app.use(clerkMiddleware())
 app.get('/',(req,res)=>res.send("server is running"))
 app.use('/api/inngest',serve({client:inngest,functions}))
 app.use('/api/user',userRoute)
+app.use('/api/post',postRoute)
+app.use('/api/story',storyRoute)
+app.use('/api/message',messageRoute)
 const PORT = process.env.PORT || 5000
 
 app.listen(PORT,()=>console.log(`server is running on port ${PORT}`))

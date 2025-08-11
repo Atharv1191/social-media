@@ -2,6 +2,8 @@ const { Inngest } = require('inngest');
 const User = require('../models/User.js');
 const Connection = require('../models/Connection.js');
 const sendEmail = require('../configs/nodemailer.js');
+const Story = require('../models/Story.js');
+const Message = require('../models/Message.js');
 
 // Initialize Inngest
 const inngest = new Inngest({ id: "pingup-app" });
@@ -9,58 +11,58 @@ const inngest = new Inngest({ id: "pingup-app" });
 //inngest function to save user in database
 
 const syncUserCreation = inngest.createFunction(
-    { id: "sync-user-from-clerk" },
-    { event: "clerk/user.created" },
+  { id: "sync-user-from-clerk" },
+  { event: "clerk/user.created" },
 
-    async ({ event }) => {
-        const { id, first_name, last_name, email_addresses, image_url } = event.data
-        let username = email_addresses[0].email_address.split("@")[0]
+  async ({ event }) => {
+    const { id, first_name, last_name, email_addresses, image_url } = event.data
+    let username = email_addresses[0].email_address.split("@")[0]
 
-        const user = await User.findOne({ username })
-        if (user) {
-            username = username + Math.floor(Math.random() * 10000)
-        }
-        const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            full_name: first_name + last_name,
-            profile_picture: image_url,
-            username
-        }
-        await User.create(userData)
+    const user = await User.findOne({ username })
+    if (user) {
+      username = username + Math.floor(Math.random() * 10000)
     }
+    const userData = {
+      _id: id,
+      email: email_addresses[0].email_address,
+      full_name: first_name + last_name,
+      profile_picture: image_url,
+      username
+    }
+    await User.create(userData)
+  }
 )
 
 //inngest functon to update user in database
 
 
 const syncUserUpdation = inngest.createFunction(
-    { id: "update-user-from-clerk" },
-    { event: "clerk/user.updated" },
+  { id: "update-user-from-clerk" },
+  { event: "clerk/user.updated" },
 
-    async ({ event }) => {
-        const { id, first_name, last_name, email_addresses, image_url } = event.data
+  async ({ event }) => {
+    const { id, first_name, last_name, email_addresses, image_url } = event.data
 
-        const updatedUserData = {
-            email: email_addresses[0].email_address,
-            full_name: first_name + " " + last_name,
-            profile_picture: image_url
-        }
-        await User.findByIdAndUpdate(id, updatedUserData)
-
+    const updatedUserData = {
+      email: email_addresses[0].email_address,
+      full_name: first_name + " " + last_name,
+      profile_picture: image_url
     }
+    await User.findByIdAndUpdate(id, updatedUserData)
+
+  }
 )
 
 
 const syncUserDeletion = inngest.createFunction(
-    { id: "delete-user-with-clerk" },
-    { event: "clerk/user.deleted" },
+  { id: "delete-user-with-clerk" },
+  { event: "clerk/user.deleted" },
 
-    async ({ event }) => {
-        const { id } = event.data;
-        await User.findByIdAndDelete(id)
+  async ({ event }) => {
+    const { id } = event.data;
+    await User.findByIdAndDelete(id)
 
-    }
+  }
 )
 
 //iingest function to send remainder when a new connection request is added
@@ -130,9 +132,75 @@ const sendNewConnectionRequestReminders = inngest.createFunction(
   }
 );
 
+//delete stroy affter 24 hours
+
+const deleteStory = inngest.createFunction(
+  { id: "story-delete" },
+  { event: "app/story.delete" },
+  async ({ event, step }) => {
+    const { storyId } = event.data;
+    const in24Hours = new Date.now() + 24 * 60 * 60 * 1000
+    await step.sleepUntil("wait-for-24-hours", in24Hours)
+    await step.run("delete-story", async () => {
+      await Story.findByIdAndDelete(storyId)
+      return { message: "Story Deleted" }
+    })
+
+  }
+)
+
+const sendNotificationOfUnseenMessages = inngest.createFunction(
+  { id: "send-unseen-messages-notification" },
+  { cron: "TZ=America/New_York 0 9 * * *" }, // every day at 9 am
+  async ({ step }) => {
+    // Fetch unseen messages with recipient details
+    const messages = await Message.find({ seen: false }).populate("to_user_id");
+
+    // Count unseen messages per user
+    const unseenCount = {};
+    messages.forEach(message => {
+      const userId = message.to_user_id._id.toString();
+      unseenCount[userId] = (unseenCount[userId] || 0) + 1;
+    });
+
+    // Send notification email to each user
+    for (const userId in unseenCount) {
+      const user = await User.findById(userId);
+      if (!user) continue; // Skip if user not found
+
+      const subject = `You have ${unseenCount[userId]} unseen messages`;
+
+      // HTML email body (from screenshot template)
+      const body = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Hi ${user.full_name},</h2>
+          <p>You have <strong>${unseenCount[userId]}</strong> unseen messages.</p>
+          <p>
+            Click 
+            <a href="${process.env.FRONTEND_URL}/messages" style="color: #10b981; text-decoration: none;">
+              here
+            </a> 
+            to view them.
+          </p>
+          <br>
+          <p>Thanks,<br>PingUp - Stay Connected</p>
+        </div>
+      `;
+
+      await sendEmail({
+        to: user.email,
+        subject,
+        body
+      });
+    }
+    return {message: "Notification sent"}
+  }
+);
+
+
 
 // Export Inngest and an empty function list (you'll add to this later)
 module.exports = {
-    inngest,
-    functions: [syncUserCreation, syncUserUpdation, syncUserDeletion,sendNewConnectionRequestReminders]
+  inngest,
+  functions: [syncUserCreation, syncUserUpdation, syncUserDeletion, sendNewConnectionRequestReminders, deleteStory,sendNotificationOfUnseenMessages]
 };
