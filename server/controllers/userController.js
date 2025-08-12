@@ -3,7 +3,7 @@ const imagekit = require("../configs/imagekit");
 const User = require("../models/User");
 const Connection = require("../models/Connection");
 const Post = require("../models/Post");
-const inngest = require("../inngest/index");
+const { inngest } = require('../inngest/index'); 
 
 // GET USER DATA
 const getUserData = async (req, res) => {

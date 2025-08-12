@@ -1,9 +1,15 @@
 import React, { useState } from 'react'
 import { dummyUserData } from '../assets/assets'
 import { Pencil } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+import { updateUser } from '../Features/User/userSlice'
+import { useAuth } from '@clerk/clerk-react'
+import toast from 'react-hot-toast'
 
 const ProfileModel = ({setShowEdit}) => {
-  const user = dummyUserData
+  const dispatch = useDispatch()
+  const {getToken} = useAuth()
+  const user = useSelector((state)=>state.user.value)
   const [editForm, setEditForm] = useState({
     username: user.username,
     bio: user.bio,
@@ -15,14 +21,30 @@ const ProfileModel = ({setShowEdit}) => {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
-    // Save logic
+    try {
+      const userData = new FormData();
+      const {username,full_name,bio,location,profile_picture,cover_photo} = editForm
+      userData.append('username',username)
+      userData.append('bio',bio)
+      userData.append('location',location)
+      userData.append('full_name',full_name);
+      profile_picture && userData.append('profile',profile_picture)
+      cover_photo && userData.append('cover',cover_photo)
+
+      const token = await getToken()
+    dispatch(updateUser({userData,token}))
+    setShowEdit(false)
+    } catch (error) {
+      toast.error(error.message)
+      
+    }
   }
 
   return (
     <div className='fixed inset-0 z-[110] h-screen overflow-y-auto bg-black/50 flex justify-center items-start pt-10'>
       <div className='w-full max-w-2xl bg-white rounded-lg shadow-lg p-6'>
         <h1 className='text-2xl font-bold text-gray-900 mb-6'>Edit Profile</h1>
-        <form className='space-y-6' onSubmit={handleSaveProfile}>
+        <form className='space-y-6' onSubmit={e=>toast.promise(handleSaveProfile(e),{loading:"Saving...."})}>
           
           {/* Profile Picture Upload */}
           <div className='flex flex-col items-start'>

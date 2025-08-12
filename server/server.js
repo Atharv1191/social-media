@@ -22,7 +22,7 @@ app.use(clerkMiddleware())
 //routes
 
 app.get('/',(req,res)=>res.send("server is running"))
-app.use('/api/inngest',serve({client:inngest,functions}))
+app.use('/api/inngesQAt',serve({client:inngest,functions}))
 app.use('/api/user',userRoute)
 app.use('/api/post',postRoute)
 app.use('/api/story',storyRoute)

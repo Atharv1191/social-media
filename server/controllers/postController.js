@@ -78,34 +78,44 @@ const getFeedPosts = async(req,res)=>{
 
 
 //like post
-const likePost = async(req,res)=>{
-    try {
-        const {userId} = req.auth();
-        const {postId} = req.body;
+// like post
+const likePost = async (req, res) => {
+  try {
+    const { userId } = req.auth(); // ✅ This is correct for Clerk
+    const { postId } = req.body;
 
-        const post  = await Post.findById(postId)
-        if(post.likes_count.includes(userId)){
-            post.likes_count = post.likes_count.filter(user=>user !==userId)
-            await Post.save()
-            return res.json({
-                success:true,
-                messgae:"Post unliked"
-            })
-        }else{
-            post.likes_count.push(userId)
-            await post.save()
-        }
-         return res.json({
-                success:true,
-                messgae:"Post liked"
-            })
-        
-    } catch (error) {
-         console.log(error)
-         return res.json({
-            success:false,
-            message:error.message
-        }) 
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
     }
-}
+
+    if (post.likes_count.includes(userId)) {
+      // Unlike
+      post.likes_count = post.likes_count.filter((user) => user !== userId);
+      await post.save(); // ✅ FIXED: Use the document instance
+      return res.json({
+        success: true,
+        message: "Post unliked",
+      });
+    } else {
+      // Like
+      post.likes_count.push(userId);
+      await post.save(); // ✅ FIXED: Use the document instance
+      return res.json({
+        success: true,
+        message: "Post liked",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {addPost,getFeedPosts,likePost}

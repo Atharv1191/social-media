@@ -1,6 +1,6 @@
 const protect = (req, res, next) => {
     try {
-        const { userId } = req.auth;  // ❌ don't await
+        const { userId } = req.auth();  // ❌ don't await
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -15,5 +15,6 @@ const protect = (req, res, next) => {
         });
     }
 };
+
 
 module.exports = protect;

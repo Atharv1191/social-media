@@ -2,8 +2,7 @@ const fs = require('fs');
 const imagekit = require('../configs/imagekit');
 const Story = require('../models/Story');
 const User = require('../models/User');
-const inngest = require('../inngest/index');
-//add user story
+const { inngest } = require('../inngest/index'); 
 
 const addUserStroy = async (req, res) => {
     try {
@@ -52,31 +51,33 @@ const addUserStroy = async (req, res) => {
 //get user stories
 
 const getStories = async (req, res) => {
-    try {
-        const { userId } = req.auth();
-        const user = User.findById(userId)
+  try {
+    const { userId } = req.auth();
+    const user = await User.findById(userId);
 
-        //user connections and followings
+    const userIds = [
+      userId,
+      ...(user.connections || []),
+      ...(user.following || [])
+    ];
 
-        const userIds = [userId, ...user.connections, ...user.following]
-        const stories = await Story.find({
-            user: { $in: userIds }
-        }).populate("user").sort({ createdAt: -1 })
-        return res.json({
-            success: true,
-            stories
-           
-        });
-    } catch (error) {
-        console.log(error)
-        return res.json({
-            success: false,
-            message: error.message,
-        });
+    const stories = await Story.find({
+      user: { $in: userIds }
+    }).populate("user").sort({ createdAt: -1 });
 
-    }
+    return res.json({
+      success: true,
+      stories
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
-}
 
 
 module.exports = { addUserStroy, getStories }
