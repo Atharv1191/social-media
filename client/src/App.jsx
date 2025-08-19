@@ -56,21 +56,27 @@ const App = () => {
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (pathnameRef.current === `/messages/${message.from_user_id._id}`) {
-          dispatch(addMessage(message));
-        } else {
-          toast.custom(
-            (t) => <Notification t={t} message={message} />,
-            { position: 'bottom-right' }
-          );
-        }
-      } catch (err) {
-        console.error('Error parsing SSE message:', err);
-      }
-    };
+  eventSource.onmessage = (event) => {
+  try {
+    const message = JSON.parse(event.data);
+    
+    // Skip connection messages or messages without proper structure
+    if (message.type === 'connected' || !message.from_user_id || !message.from_user_id._id) {
+      return;
+    }
+    
+    if (pathnameRef.current === `/messages/${message.from_user_id._id}`) {
+      dispatch(addMessage(message));
+    } else {
+      toast.custom(
+        (t) => <Notification t={t} message={message} />,
+        { position: 'bottom-right' }
+      );
+    }
+  } catch (err) {
+    console.error('Error parsing SSE message:', err);
+  }
+};
 
     eventSource.onerror = (err) => {
       console.error('SSE error:', err);
